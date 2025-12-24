@@ -17,7 +17,8 @@ const elements = {
     // Network stats
     networkHashrate: document.getElementById('networkHashrate'),
     difficulty: document.getElementById('difficulty'),
-    blockReward: document.getElementById('blockReward'),
+    blockSubsidy: document.getElementById('blockSubsidy'),
+    avgBlockFees: document.getElementById('avgBlockFees'),
     lastUpdate: document.getElementById('lastUpdate'),
     blockHeight: document.getElementById('blockHeight'),
 
@@ -27,6 +28,10 @@ const elements = {
     poolFee: document.getElementById('poolFee'),
     poolFeeSlider: document.getElementById('poolFeeSlider'),
     formula: document.getElementById('formula'),
+    txFees: document.getElementById('txFees'),
+    subsidyDisplay: document.getElementById('subsidyDisplay'),
+    totalRewardDisplay: document.getElementById('totalRewardDisplay'),
+    rewardValues: document.getElementById('reward-values'),
 
     // Formula displays
     hashrateValues: document.getElementById('hashrate-values'),
@@ -67,8 +72,11 @@ export function updateNetworkStats(data) {
     if (elements.difficulty) {
         elements.difficulty.textContent = formatDifficulty(data.difficulty);
     }
-    if (elements.blockReward) {
-        elements.blockReward.textContent = `${data.blockReward} BTC`;
+    if (elements.blockSubsidy) {
+        elements.blockSubsidy.textContent = `${data.blockSubsidy} BTC`;
+    }
+    if (elements.avgBlockFees) {
+        elements.avgBlockFees.textContent = `${data.avgBlockFees.toFixed(4)} BTC`;
     }
     if (elements.lastUpdate) {
         const time = new Date(data.timestamp).toLocaleTimeString();
@@ -141,6 +149,8 @@ export function updateFormulaDisplays(data) {
         poolRevenue,
         feePercent,
         formulaType,
+        blockSubsidy,
+        avgBlockFees,
         blockReward
     } = data;
 
@@ -161,7 +171,7 @@ export function updateFormulaDisplays(data) {
         if (formulaType === 'difficulty') {
             elements.calcEquation.textContent = '(Hash × Reward × 86400) ÷ (Diff × 2³²)';
         } else {
-            elements.calcEquation.textContent = '(Hashrate ÷ Network) × 144 × Reward';
+            elements.calcEquation.textContent = `(Hashrate ÷ Network) × 144 × (${blockSubsidy} + ${avgBlockFees.toFixed(4)})`;
         }
     }
     if (elements.calcValues) {
@@ -170,7 +180,7 @@ export function updateFormulaDisplays(data) {
                 `${formatBTC(dailyBTC)} BTC/day`;
         } else {
             elements.calcValues.textContent =
-                `${formatPercent(sharePercent)} × 144 × ${blockReward} = ${formatBTC(dailyBTC)} BTC/day`;
+                `${formatPercent(sharePercent)} × 144 × ${blockReward.toFixed(4)} = ${formatBTC(dailyBTC)} BTC/day`;
         }
     }
 }
@@ -183,8 +193,35 @@ export function getInputValues() {
         hashrate: parseFloat(elements.hashrate?.value) || 0,
         hashrateUnit: elements.hashrateUnit?.value || 'PH',
         poolFee: parseFloat(elements.poolFee?.value) || 0,
-        formula: elements.formula?.value || 'hashrate'
+        formula: elements.formula?.value || 'hashrate',
+        txFees: parseFloat(elements.txFees?.value) || 0
     };
+}
+
+/**
+ * Update block reward display (subsidy + fees = total)
+ */
+export function updateRewardDisplay(subsidy, txFees) {
+    const total = subsidy + txFees;
+
+    if (elements.subsidyDisplay) {
+        elements.subsidyDisplay.textContent = subsidy.toFixed(3);
+    }
+    if (elements.totalRewardDisplay) {
+        elements.totalRewardDisplay.textContent = total.toFixed(4);
+    }
+    if (elements.rewardValues) {
+        elements.rewardValues.textContent = `${subsidy} + ${txFees.toFixed(4)} = ${total.toFixed(4)} BTC`;
+    }
+}
+
+/**
+ * Set default tx fees value (from network data)
+ */
+export function setDefaultTxFees(avgFees) {
+    if (elements.txFees) {
+        elements.txFees.value = avgFees.toFixed(4);
+    }
 }
 
 /**

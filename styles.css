@@ -25,9 +25,9 @@
     --font-display: 'Segoe UI', system-ui, sans-serif;
     --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
 
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
+    --radius-sm: 2px;
+    --radius-md: 3px;
+    --radius-lg: 4px;
 
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     --shadow-gold: 0 0 20px rgba(244, 161, 0, 0.15);
@@ -68,20 +68,18 @@ header {
     max-width: 300px;
     width: 100%;
     height: auto;
-    border-radius: var(--radius-lg);
+    border-radius: 0;
     margin-bottom: 1rem;
-    border: 2px solid var(--gold-primary);
-    box-shadow: 0 0 20px rgba(244, 161, 0, 0.3);
+    border: 3px solid var(--gold-primary);
 }
 
 h1 {
     font-size: 2.5rem;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--gold-primary);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 0.25rem;
-    text-shadow: 0 0 30px rgba(244, 161, 0, 0.3);
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
 }
 
 .subtitle {
@@ -97,8 +95,8 @@ h1 {
     margin-top: 1rem;
     padding: 0.5rem 1rem;
     background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border: 2px solid var(--border-color);
+    border-radius: 0;
     font-size: 0.875rem;
 }
 
@@ -137,11 +135,10 @@ h1 {
 /* Cards */
 .card {
     background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
+    border: 2px solid var(--border-color);
+    border-radius: 0;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
-    box-shadow: var(--shadow);
 }
 
 .card h2 {
@@ -173,8 +170,8 @@ h1 {
 .unit-toggle {
     display: flex;
     gap: 0;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border: 2px solid var(--border-color);
+    border-radius: 0;
     overflow: hidden;
 }
 
@@ -211,8 +208,8 @@ h1 {
     gap: 0.25rem;
     padding: 1rem;
     background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
+    border-radius: 0;
+    border: 2px solid var(--border-color);
 }
 
 .stat-label {
@@ -251,8 +248,8 @@ h1 {
 
 .formula-side {
     background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border: 2px solid var(--border-color);
+    border-radius: 0;
     padding: 1rem;
 }
 
@@ -277,7 +274,7 @@ h1 {
     color: var(--text-secondary);
     padding: 0.5rem;
     background: var(--bg-primary);
-    border-radius: var(--radius-sm);
+    border-radius: 0;
     border: 1px solid var(--border-color);
 }
 
@@ -332,17 +329,98 @@ h1 {
     padding: 1rem;
     margin-bottom: 0.75rem;
     background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-left: 3px solid var(--gold-primary);
-    border-radius: var(--radius-sm);
+    border: 2px solid var(--border-color);
+    border-left: 4px solid var(--gold-primary);
+    border-radius: 0;
     font-size: 0.875rem;
     color: var(--text-secondary);
-    line-height: 1.5;
-    animation: slideDown 0.2s ease-out;
+    line-height: 1.7;
+}
+
+.info-box code {
+    font-family: var(--font-mono);
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    font-size: 0.85em;
+}
+
+.info-box .var-input {
+    background: rgba(244, 161, 0, 0.2);
+    color: var(--gold-primary);
+    border: 1px solid var(--gold-primary);
+}
+
+.info-box .var-network {
+    background: rgba(100, 200, 255, 0.15);
+    color: #64c8ff;
+    border: 1px solid #64c8ff;
+}
+
+.info-box .var-result {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+    border: 1px solid #4ade80;
+}
+
+.info-box .formula-block {
+    display: block;
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    text-align: center;
 }
 
 .info-box.show {
     display: block;
+}
+
+.info-box p {
+    margin-bottom: 0.5rem;
+}
+
+.info-box p:last-child {
+    margin-bottom: 0;
+}
+
+/* Variable Legend */
+.var-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    font-size: 0.8rem;
+}
+
+.var-legend code {
+    font-family: var(--font-mono);
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    font-size: 0.85em;
+}
+
+.var-legend .var-input {
+    background: rgba(244, 161, 0, 0.2);
+    color: var(--gold-primary);
+    border: 1px solid var(--gold-primary);
+}
+
+.var-legend .var-network {
+    background: rgba(100, 200, 255, 0.15);
+    color: #64c8ff;
+    border: 1px solid #64c8ff;
+}
+
+.var-legend .var-result {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+    border: 1px solid #4ade80;
 }
 
 @keyframes slideDown {
@@ -363,12 +441,12 @@ select {
     width: 100%;
     padding: 0.75rem 1rem;
     background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border: 2px solid var(--border-color);
+    border-radius: 0;
     color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 1rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s;
 }
 
 input[type="number"]:focus,
@@ -376,7 +454,7 @@ input[type="text"]:focus,
 select:focus {
     outline: none;
     border-color: var(--gold-primary);
-    box-shadow: 0 0 0 3px var(--gold-glow);
+    border-width: 2px;
 }
 
 select {
@@ -439,6 +517,57 @@ select {
     font-size: 0.875rem;
 }
 
+/* Block Reward Inputs */
+.reward-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--bg-input);
+    border: 2px solid var(--border-color);
+}
+
+.reward-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+}
+
+.reward-row .reward-label {
+    width: 80px;
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+.reward-row .reward-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    min-width: 60px;
+}
+
+.reward-row .reward-unit {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+}
+
+.reward-row input[type="number"] {
+    width: 100px;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.95rem;
+}
+
+.reward-row.reward-total {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.reward-row.reward-total .reward-value {
+    color: var(--gold-primary);
+    font-weight: 600;
+}
+
 /* Radio Group */
 .radio-group {
     display: flex;
@@ -488,9 +617,9 @@ select {
     flex-direction: column;
     gap: 0.25rem;
     padding: 1rem;
-    background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(244, 161, 0, 0.05) 100%);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 0;
     text-align: center;
 }
 

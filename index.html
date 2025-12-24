@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>www.webuyhash.com - Pool Business Calculator</title>
+    <title>webuyhash.com</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
             <img src="img/hero.jpeg" alt="We Buy Hash" class="hero-image">
-            <h1>www.webuyhash.com</h1>
-            <p class="subtitle">Pool Business Calculator</p>
+            <h1>webuyhash.com</h1>
             <div class="live-indicator">
                 <span class="pulse"></span>
                 <span class="live-text">LIVE</span>
@@ -33,8 +32,12 @@
                         <span class="stat-value" id="difficulty">--</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">Block Reward</span>
-                        <span class="stat-value" id="blockReward">3.125 BTC</span>
+                        <span class="stat-label">Block Subsidy</span>
+                        <span class="stat-value" id="blockSubsidy">3.125 BTC</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Avg Tx Fees</span>
+                        <span class="stat-value" id="avgBlockFees">--</span>
                     </div>
                 </div>
             </section>
@@ -42,6 +45,11 @@
             <!-- Input Section -->
             <section class="card inputs">
                 <h2>Pool Parameters</h2>
+                <div class="var-legend">
+                    <span class="legend-item"><code class="var-input">Your Input</code></span>
+                    <span class="legend-item"><code class="var-network">Network Data</code></span>
+                    <span class="legend-item"><code class="var-result">Calculated</code></span>
+                </div>
 
                 <!-- Hashrate Available -->
                 <div class="input-group with-formula">
@@ -51,7 +59,9 @@
                             <button class="info-toggle" data-info="hashrate-info" aria-label="More info">?</button>
                         </div>
                         <div class="info-box" id="hashrate-info">
-                            The total hashrate your pool has access to from connected miners. This determines your share of the network's block rewards.
+                            <p>The total hashrate your pool has access to from connected miners.</p>
+                            <p>Your <code class="var-input">Hashrate Available</code> divided by the <code class="var-network">Network Hashrate</code> determines your <code class="var-result">Network Share %</code>.</p>
+                            <span class="formula-block"><code class="var-result">Network Share</code> = <code class="var-input">Your Hashrate</code> ÷ <code class="var-network">Network Hashrate</code></span>
                         </div>
                         <div class="input-with-unit">
                             <input type="number" id="hashrate" value="10" min="0" step="0.1">
@@ -71,6 +81,73 @@
                     </div>
                 </div>
 
+                <!-- Calculation Formula -->
+                <div class="input-group with-formula">
+                    <div class="input-side">
+                        <div class="input-header">
+                            <label for="formula">Calculation Formula</label>
+                            <button class="info-toggle" data-info="formula-info" aria-label="More info">?</button>
+                        </div>
+                        <div class="info-box" id="formula-info">
+                            <p><strong>Hashrate-ratio:</strong> Simpler and more intuitive.</p>
+                            <span class="formula-block"><code class="var-result">Daily BTC</code> = (<code class="var-input">Your Hashrate</code> ÷ <code class="var-network">Network Hashrate</code>) × 144 × <code class="var-input">Block Reward</code></span>
+                            <p><strong>Difficulty-based:</strong> Uses Bitcoin's difficulty target directly. Most mathematically precise.</p>
+                            <span class="formula-block"><code class="var-result">Daily BTC</code> = (<code class="var-input">Hashrate</code> × <code class="var-input">Block Reward</code> × 86400) ÷ (<code class="var-network">Difficulty</code> × 2³²)</span>
+                        </div>
+                        <select id="formula">
+                            <option value="difficulty">Difficulty-based</option>
+                            <option value="hashrate" selected>Hashrate ratio</option>
+                        </select>
+                    </div>
+                    <div class="formula-side">
+                        <div class="formula-label">Daily BTC Formula</div>
+                        <div class="formula-display" id="calc-formula">
+                            <span class="formula-equation" id="calc-equation">(Hashrate ÷ Network) × 144 × Reward</span>
+                            <span class="formula-values" id="calc-values">-- = -- BTC/day</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Block Reward (Subsidy + Fees) -->
+                <div class="input-group with-formula">
+                    <div class="input-side">
+                        <div class="input-header">
+                            <label for="blockRewardInput">Block Reward (BTC)</label>
+                            <button class="info-toggle" data-info="reward-info" aria-label="More info">?</button>
+                        </div>
+                        <div class="info-box" id="reward-info">
+                            <p>Total reward per block = <code class="var-network">Block Subsidy</code> + <code class="var-input">Tx Fees</code></p>
+                            <p>The <code class="var-network">Block Subsidy</code> is fixed at 3.125 BTC (post-2024 halving). <code class="var-input">Tx Fees</code> vary based on network demand.</p>
+                            <span class="formula-block"><code class="var-input">Block Reward</code> = <code class="var-network">3.125</code> (subsidy) + <code class="var-input">Fees</code></span>
+                            <p><em>Default fees loaded from avg of last 15 blocks. Adjust to model different fee scenarios.</em></p>
+                        </div>
+                        <div class="reward-inputs">
+                            <div class="reward-row">
+                                <span class="reward-label">Subsidy:</span>
+                                <span class="reward-value" id="subsidyDisplay">3.125</span>
+                                <span class="reward-unit">BTC</span>
+                            </div>
+                            <div class="reward-row">
+                                <span class="reward-label">+ Fees:</span>
+                                <input type="number" id="txFees" value="0.15" min="0" step="0.01">
+                                <span class="reward-unit">BTC</span>
+                            </div>
+                            <div class="reward-row reward-total">
+                                <span class="reward-label">= Total:</span>
+                                <span class="reward-value" id="totalRewardDisplay">3.275</span>
+                                <span class="reward-unit">BTC</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="formula-side">
+                        <div class="formula-label">Block Reward Breakdown</div>
+                        <div class="formula-display" id="reward-formula">
+                            <span class="formula-equation">Subsidy (fixed) + Tx Fees (variable)</span>
+                            <span class="formula-values" id="reward-values">3.125 + 0.15 = 3.275 BTC</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Pool Fee -->
                 <div class="input-group with-formula">
                     <div class="input-side">
@@ -79,7 +156,9 @@
                             <button class="info-toggle" data-info="poolfee-info" aria-label="More info">?</button>
                         </div>
                         <div class="info-box" id="poolfee-info">
-                            The percentage fee your pool charges miners. Industry standard is 1-3%. This is your revenue as a pool operator.
+                            <p>The percentage fee your pool charges miners. Industry standard is 1-3%.</p>
+                            <p>Your <code class="var-input">Pool Fee %</code> is applied to the pool's <code class="var-result">Daily BTC Output</code> to calculate your <code class="var-result">Fee Revenue</code>.</p>
+                            <span class="formula-block"><code class="var-result">Fee Revenue</code> = <code class="var-result">Daily BTC</code> × <code class="var-input">Fee %</code></span>
                         </div>
                         <div class="slider-input">
                             <input type="range" id="poolFeeSlider" min="0" max="10" step="0.1" value="2">
@@ -92,31 +171,6 @@
                         <div class="formula-display" id="fee-formula">
                             <span class="formula-equation">Pool's Total Daily BTC × Your Fee %</span>
                             <span class="formula-values" id="fee-values">-- × --% = --</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Calculation Formula -->
-                <div class="input-group with-formula">
-                    <div class="input-side">
-                        <div class="input-header">
-                            <label for="formula">Calculation Formula</label>
-                            <button class="info-toggle" data-info="formula-info" aria-label="More info">?</button>
-                        </div>
-                        <div class="info-box" id="formula-info">
-                            <strong>Difficulty-based:</strong> Uses Bitcoin's difficulty target directly. Most mathematically precise.<br><br>
-                            <strong>Hashrate-ratio:</strong> Uses your share of network hashrate. Simpler and more intuitive.
-                        </div>
-                        <select id="formula">
-                            <option value="difficulty">Difficulty-based</option>
-                            <option value="hashrate" selected>Hashrate ratio</option>
-                        </select>
-                    </div>
-                    <div class="formula-side">
-                        <div class="formula-label">Daily BTC Formula</div>
-                        <div class="formula-display" id="calc-formula">
-                            <span class="formula-equation" id="calc-equation">(Hashrate ÷ Network) × 144 × Reward</span>
-                            <span class="formula-values" id="calc-values">-- = -- BTC/day</span>
                         </div>
                     </div>
                 </div>
@@ -179,7 +233,7 @@
 
         <footer>
             <p>Data from <a href="https://mempool.space" target="_blank">mempool.space</a> API</p>
-            <p>www.webuyhash.com | Block <span id="blockHeight">--</span></p>
+            <p>webuyhash.com | Block <span id="blockHeight">--</span></p>
         </footer>
     </div>
 

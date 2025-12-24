@@ -12,6 +12,8 @@ import {
     updateResults,
     updatePoolShare,
     updateFormulaDisplays,
+    updateRewardDisplay,
+    setDefaultTxFees,
     getInputValues,
     initInfoBoxes,
     initSliderSync,
@@ -40,6 +42,14 @@ function calculate() {
 
     const inputs = getInputValues();
 
+    // Calculate block reward from subsidy + user-defined tx fees
+    const blockSubsidy = networkData.blockSubsidy;
+    const txFees = inputs.txFees;
+    const blockReward = blockSubsidy + txFees;
+
+    // Update reward display
+    updateRewardDisplay(blockSubsidy, txFees);
+
     // Convert hashrate to H/s
     const hashrateInHps = convertToHashPerSecond(inputs.hashrate, inputs.hashrateUnit);
 
@@ -48,7 +58,7 @@ function calculate() {
         hashrate: hashrateInHps,
         difficulty: networkData.difficulty,
         networkHashrate: networkData.networkHashrate,
-        blockReward: networkData.blockReward
+        blockReward: blockReward
     }, inputs.formula);
 
     // Calculate pool share stats
@@ -75,9 +85,14 @@ function calculate() {
         feePercent: feePercent,
         formulaType: inputs.formula,
         difficulty: networkData.difficulty,
-        blockReward: networkData.blockReward
+        blockSubsidy: blockSubsidy,
+        avgBlockFees: txFees,
+        blockReward: blockReward
     });
 }
+
+// Track if we've set initial tx fees
+let initialTxFeesSet = false;
 
 /**
  * Fetch fresh network data and recalculate
@@ -89,6 +104,12 @@ async function refreshData() {
 
         networkData = await fetchAllNetworkData();
         updateNetworkStats(networkData);
+
+        // Set default tx fees from network on first load only
+        if (!initialTxFeesSet && networkData.avgBlockFees) {
+            setDefaultTxFees(networkData.avgBlockFees);
+            initialTxFeesSet = true;
+        }
 
         calculate();
 
@@ -132,6 +153,12 @@ function initEventListeners() {
     const formula = document.getElementById('formula');
     if (formula) {
         formula.addEventListener('change', calculate);
+    }
+
+    // Tx fees input
+    const txFees = document.getElementById('txFees');
+    if (txFees) {
+        txFees.addEventListener('input', debouncedCalculate);
     }
 }
 

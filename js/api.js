@@ -83,6 +83,32 @@ export async function fetchBTCPrice() {
 }
 
 /**
+ * Fetch recent blocks to calculate average transaction fees
+ * Returns average fees per block in BTC
+ */
+export async function fetchAverageBlockFees() {
+    const response = await fetch(`${API_BASE}/blocks`);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch blocks: ${response.status}`);
+    }
+    const blocks = await response.json();
+
+    // Calculate average total fees per block (in satoshis)
+    const totalFees = blocks.reduce((sum, block) => {
+        return sum + (block.extras?.totalFees || 0);
+    }, 0);
+
+    const avgFeesSats = totalFees / blocks.length;
+    const avgFeesBTC = avgFeesSats / 100000000; // Convert to BTC
+
+    return {
+        avgFeesBTC: avgFeesBTC,
+        avgFeesSats: avgFeesSats,
+        blocksAnalyzed: blocks.length
+    };
+}
+
+/**
  * Fetch all network data at once
  * Returns combined object with all mining stats
  */
@@ -95,20 +121,23 @@ export async function fetchAllNetworkData() {
 
     try {
         // Fetch all data in parallel
-        const [miningStats, diffData, height, btcPrice] = await Promise.all([
+        const [miningStats, diffData, height, btcPrice, feeData] = await Promise.all([
             fetchMiningStats(),
             fetchDifficulty(),
             fetchBlockHeight(),
-            fetchBTCPrice()
+            fetchBTCPrice(),
+            fetchAverageBlockFees()
         ]);
 
-        const blockReward = calculateBlockReward(height);
+        const blockSubsidy = calculateBlockReward(height);
 
         const result = {
             networkHashrate: miningStats.currentHashrate,
             difficulty: miningStats.currentDifficulty,
             blockHeight: height,
-            blockReward: blockReward,
+            blockSubsidy: blockSubsidy,
+            avgBlockFees: feeData.avgFeesBTC,
+            blockReward: blockSubsidy + feeData.avgFeesBTC, // Total reward = subsidy + fees
             btcPrice: btcPrice,
             difficultyAdjustment: diffData,
             timestamp: now
