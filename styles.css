@@ -64,6 +64,16 @@ header {
     border-bottom: 1px solid var(--border-color);
 }
 
+.hero-image {
+    max-width: 300px;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-lg);
+    margin-bottom: 1rem;
+    border: 2px solid var(--gold-primary);
+    box-shadow: 0 0 20px rgba(244, 161, 0, 0.3);
+}
+
 h1 {
     font-size: 2.5rem;
     font-weight: 700;
