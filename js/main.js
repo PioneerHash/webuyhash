@@ -23,6 +23,7 @@ import {
     initSliderSync,
     initUnitToggle,
     initProjectionDates,
+    initPagination,
     setLoading,
     showError,
     clearError,
@@ -253,6 +254,7 @@ async function init() {
     initSliderSync();
     initUnitToggle();
     initProjectionDates();
+    initPagination();
 
     // Set up event listeners
     initEventListeners();

@@ -325,6 +325,15 @@
                 </div>
 
                 <!-- Projections Table -->
+                <div class="projections-controls">
+                    <div class="pagination-info">
+                        <span id="paginationInfo">Showing all results</span>
+                    </div>
+                    <div class="projections-actions">
+                        <button class="action-btn" id="exportCsvBtn">Export CSV</button>
+                    </div>
+                </div>
+
                 <div class="projections-table-container">
                     <table class="projections-table">
                         <thead>
@@ -343,12 +352,19 @@
                         </tbody>
                         <tfoot>
                             <tr class="projections-total">
-                                <td colspan="4">Total Projected Revenue</td>
+                                <td colspan="5">Total Projected Revenue</td>
                                 <td id="projectionsTotalMonthly">--</td>
                                 <td id="projectionsTotalCumulative">--</td>
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="pagination">
+                    <button class="page-btn" id="prevPage" disabled>← Prev</button>
+                    <span class="page-numbers" id="pageNumbers"></span>
+                    <button class="page-btn" id="nextPage">Next →</button>
                 </div>
 
                 <!-- Quarterly Summary -->

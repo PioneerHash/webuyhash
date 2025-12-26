@@ -12,6 +12,13 @@ let displayUnit = 'btc';
 // Store current values for re-rendering on unit toggle
 let currentResults = null;
 
+// Pagination state
+const ROWS_PER_PAGE = 30;
+const STORAGE_KEY = 'webuyhash_projections';
+let currentPage = 1;
+let totalPages = 1;
+let currentProjectionParams = null;
+
 // DOM element references
 const elements = {
     // Network stats
@@ -59,6 +66,14 @@ const elements = {
     formulaNetworkHashrate: document.getElementById('formulaNetworkHashrate'),
     formulaShare: document.getElementById('formulaShare'),
     formulaRevenue: document.getElementById('formulaRevenue'),
+
+    // Pagination controls
+    paginationInfo: document.getElementById('paginationInfo'),
+    pagination: document.getElementById('pagination'),
+    prevPage: document.getElementById('prevPage'),
+    nextPage: document.getElementById('nextPage'),
+    pageNumbers: document.getElementById('pageNumbers'),
+    exportCsvBtn: document.getElementById('exportCsvBtn'),
 
     // Main results table
     amountHeader: document.getElementById('amountHeader'),
@@ -289,33 +304,21 @@ function formatDateInput(date) {
 }
 
 /**
- * Render projections table
+ * Render projections table with pagination
  */
 export function renderProjections(projections, quarters, params) {
     if (!elements.projectionsBody) return;
 
-    // Build table rows
-    let html = '';
-    projections.forEach((proj, index) => {
-        // Highlight every 3rd row for monthly, every 4th for weekly
-        const highlightInterval = params?.granularity === 'weekly' ? 4 : 3;
-        const isHighlight = (index + 1) % highlightInterval === 0;
-        const rowClass = isHighlight ? 'quarter-row' : '';
+    // Store projections in localStorage for pagination
+    storeProjections(projections, params);
+    currentProjectionParams = params;
 
-        html += `
-            <tr class="${rowClass}">
-                <td>${proj.dateStr}</td>
-                <td>${proj.label}</td>
-                <td>${formatHashrateCompact(proj.poolHashrate)}</td>
-                <td>${formatHashrateCompact(proj.networkHashrate)}</td>
-                <td>${formatPercent(proj.sharePercent)}</td>
-                <td>${formatValue(proj.periodRevenue)}</td>
-                <td>${formatValue(proj.cumulativeRevenue)}</td>
-            </tr>
-        `;
-    });
+    // Calculate pagination
+    totalPages = Math.ceil(projections.length / ROWS_PER_PAGE);
+    currentPage = 1;
 
-    elements.projectionsBody.innerHTML = html;
+    // Render current page
+    renderProjectionsPage();
 
     // Update totals
     if (projections.length > 0) {
@@ -339,6 +342,251 @@ export function renderProjections(projections, quarters, params) {
     if (projections.length > 0 && params) {
         updateProjectionFormulae(projections, params);
     }
+
+    // Update pagination UI
+    updatePaginationUI(projections.length);
+}
+
+/**
+ * Store projections in localStorage
+ */
+function storeProjections(projections, params) {
+    try {
+        const data = {
+            projections: projections,
+            params: params,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.warn('Could not store projections in localStorage:', e);
+    }
+}
+
+/**
+ * Get projections from localStorage
+ */
+function getStoredProjections() {
+    try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : null;
+    } catch (e) {
+        console.warn('Could not retrieve projections from localStorage:', e);
+        return null;
+    }
+}
+
+/**
+ * Render a specific page of projections
+ */
+function renderProjectionsPage() {
+    const stored = getStoredProjections();
+    if (!stored || !stored.projections) return;
+
+    const projections = stored.projections;
+    const params = stored.params || currentProjectionParams;
+
+    const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+    const endIndex = Math.min(startIndex + ROWS_PER_PAGE, projections.length);
+    const pageData = projections.slice(startIndex, endIndex);
+
+    // Build table rows
+    let html = '';
+    pageData.forEach((proj, index) => {
+        const globalIndex = startIndex + index;
+        // Highlight every 3rd row for monthly, every 4th for weekly
+        const highlightInterval = params?.granularity === 'weekly' ? 4 : 3;
+        const isHighlight = (globalIndex + 1) % highlightInterval === 0;
+        const rowClass = isHighlight ? 'quarter-row' : '';
+
+        html += `
+            <tr class="${rowClass}">
+                <td>${proj.dateStr}</td>
+                <td>${proj.label}</td>
+                <td>${formatHashrateCompact(proj.poolHashrate)}</td>
+                <td>${formatHashrateCompact(proj.networkHashrate)}</td>
+                <td>${formatPercent(proj.sharePercent)}</td>
+                <td>${formatValue(proj.periodRevenue)}</td>
+                <td>${formatValue(proj.cumulativeRevenue)}</td>
+            </tr>
+        `;
+    });
+
+    elements.projectionsBody.innerHTML = html;
+}
+
+/**
+ * Update pagination UI
+ */
+function updatePaginationUI(totalRows) {
+    // Update info text
+    if (elements.paginationInfo) {
+        if (totalRows <= ROWS_PER_PAGE) {
+            elements.paginationInfo.textContent = `Showing all ${totalRows} results`;
+        } else {
+            const start = (currentPage - 1) * ROWS_PER_PAGE + 1;
+            const end = Math.min(currentPage * ROWS_PER_PAGE, totalRows);
+            elements.paginationInfo.textContent = `Showing ${start}-${end} of ${totalRows} results`;
+        }
+    }
+
+    // Show/hide pagination
+    if (elements.pagination) {
+        if (totalRows <= ROWS_PER_PAGE) {
+            elements.pagination.classList.add('hidden');
+        } else {
+            elements.pagination.classList.remove('hidden');
+        }
+    }
+
+    // Update prev/next buttons
+    if (elements.prevPage) {
+        elements.prevPage.disabled = currentPage <= 1;
+    }
+    if (elements.nextPage) {
+        elements.nextPage.disabled = currentPage >= totalPages;
+    }
+
+    // Render page numbers
+    renderPageNumbers(totalRows);
+}
+
+/**
+ * Render page number buttons
+ */
+function renderPageNumbers(totalRows) {
+    if (!elements.pageNumbers) return;
+
+    let html = '';
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+        // Show all pages
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<span class="page-num ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</span>`;
+        }
+    } else {
+        // Show with ellipsis
+        if (currentPage <= 3) {
+            for (let i = 1; i <= 4; i++) {
+                html += `<span class="page-num ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</span>`;
+            }
+            html += `<span class="page-num ellipsis">...</span>`;
+            html += `<span class="page-num" data-page="${totalPages}">${totalPages}</span>`;
+        } else if (currentPage >= totalPages - 2) {
+            html += `<span class="page-num" data-page="1">1</span>`;
+            html += `<span class="page-num ellipsis">...</span>`;
+            for (let i = totalPages - 3; i <= totalPages; i++) {
+                html += `<span class="page-num ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</span>`;
+            }
+        } else {
+            html += `<span class="page-num" data-page="1">1</span>`;
+            html += `<span class="page-num ellipsis">...</span>`;
+            for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                html += `<span class="page-num ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</span>`;
+            }
+            html += `<span class="page-num ellipsis">...</span>`;
+            html += `<span class="page-num" data-page="${totalPages}">${totalPages}</span>`;
+        }
+    }
+
+    elements.pageNumbers.innerHTML = html;
+}
+
+/**
+ * Go to a specific page
+ */
+export function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+
+    currentPage = page;
+    renderProjectionsPage();
+
+    const stored = getStoredProjections();
+    updatePaginationUI(stored?.projections?.length || 0);
+}
+
+/**
+ * Initialize pagination event listeners
+ */
+export function initPagination() {
+    if (elements.prevPage) {
+        elements.prevPage.addEventListener('click', () => goToPage(currentPage - 1));
+    }
+    if (elements.nextPage) {
+        elements.nextPage.addEventListener('click', () => goToPage(currentPage + 1));
+    }
+    if (elements.pageNumbers) {
+        elements.pageNumbers.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.classList.contains('page-num') && !target.classList.contains('ellipsis')) {
+                const page = parseInt(target.dataset.page);
+                if (!isNaN(page)) {
+                    goToPage(page);
+                }
+            }
+        });
+    }
+    if (elements.exportCsvBtn) {
+        elements.exportCsvBtn.addEventListener('click', exportProjectionsCsv);
+    }
+}
+
+/**
+ * Export projections to CSV
+ */
+function exportProjectionsCsv() {
+    const stored = getStoredProjections();
+    if (!stored || !stored.projections || stored.projections.length === 0) {
+        alert('No projection data to export');
+        return;
+    }
+
+    const projections = stored.projections;
+    const params = stored.params;
+
+    // Build CSV content
+    const headers = ['Date', 'Period', 'Pool Hashrate (H/s)', 'Network Hashrate (H/s)', 'Share %', 'Period Revenue (BTC)', 'Cumulative Revenue (BTC)'];
+    const rows = projections.map(proj => [
+        proj.dateStr,
+        proj.label,
+        proj.poolHashrate.toExponential(4),
+        proj.networkHashrate.toExponential(4),
+        proj.sharePercent.toFixed(6),
+        proj.periodRevenue.toFixed(8),
+        proj.cumulativeRevenue.toFixed(8)
+    ]);
+
+    // Add metadata rows at top
+    const metadata = [
+        ['# webuyhash.com - Pool Revenue Projections'],
+        ['# Generated:', new Date().toISOString()],
+        ['# Start Date:', params?.startDate ? new Date(params.startDate).toLocaleDateString() : '--'],
+        ['# End Date:', params?.endDate ? new Date(params.endDate).toLocaleDateString() : '--'],
+        ['# Granularity:', params?.granularity || '--'],
+        ['# Pool Growth Rate:', `${params?.poolGrowthRate || 0}% per month`],
+        ['# Network Growth Rate:', `${params?.networkGrowthRate || 0}% per month`],
+        ['# Block Reward:', `${params?.blockReward || 0} BTC`],
+        ['# Pool Fee:', `${params?.poolFee || 0}%`],
+        ['']
+    ];
+
+    const csvContent = [
+        ...metadata.map(row => row.join(',')),
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `webuyhash-projections-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 /**
