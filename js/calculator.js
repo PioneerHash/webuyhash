@@ -349,34 +349,50 @@ function formatDateShort(date) {
 }
 
 /**
- * Calculate quarterly summaries from monthly projections
+ * Calculate quarterly summaries from projections
+ * Groups projections by calendar quarter (Q1=Jan-Mar, Q2=Apr-Jun, etc.)
  *
- * @param {Array} projections - Array of monthly projections
+ * @param {Array} projections - Array of projection objects with date property
  * @returns {Array} Array of quarterly summary objects
  */
 export function calculateQuarterlySummaries(projections) {
-    const quarters = [];
-    const numQuarters = Math.ceil(projections.length / 3);
+    if (!projections || projections.length === 0) return [];
 
-    for (let q = 0; q < numQuarters; q++) {
-        const startMonth = q * 3;
-        const endMonth = Math.min(startMonth + 3, projections.length);
-        const quarterMonths = projections.slice(startMonth, endMonth);
+    const quarterMap = new Map();
 
-        if (quarterMonths.length === 0) continue;
+    projections.forEach(proj => {
+        const date = new Date(proj.date);
+        const year = date.getFullYear();
+        const quarter = Math.floor(date.getMonth() / 3) + 1;
+        const key = `${year}-Q${quarter}`;
 
-        const quarterRevenue = quarterMonths.reduce((sum, m) => sum + m.monthlyRevenue, 0);
-        const lastMonth = quarterMonths[quarterMonths.length - 1];
+        if (!quarterMap.has(key)) {
+            quarterMap.set(key, {
+                year,
+                quarter,
+                label: `Q${quarter} ${year}`,
+                projections: []
+            });
+        }
+        quarterMap.get(key).projections.push(proj);
+    });
 
-        quarters.push({
-            quarter: q + 1,
-            label: `Q${q + 1}`,
+    // Convert to array and calculate summaries
+    const quarters = Array.from(quarterMap.values()).map(q => {
+        const quarterRevenue = q.projections.reduce((sum, p) => sum + p.periodRevenue, 0);
+        const lastProj = q.projections[q.projections.length - 1];
+
+        return {
+            year: q.year,
+            quarter: q.quarter,
+            label: q.label,
             revenue: quarterRevenue,
-            endSharePercent: lastMonth.sharePercent,
-            endPoolHashrate: lastMonth.poolHashrate,
-            cumulativeAtEnd: lastMonth.cumulativeRevenue
-        });
-    }
+            endSharePercent: lastProj.sharePercent,
+            endPoolHashrate: lastProj.poolHashrate,
+            cumulativeAtEnd: lastProj.cumulativeRevenue,
+            periodCount: q.projections.length
+        };
+    });
 
     return quarters;
 }

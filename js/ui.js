@@ -281,16 +281,93 @@ export function getProjectionInputs() {
  * Initialize projection date inputs with defaults
  */
 export function initProjectionDates() {
-    const today = new Date();
-    const defaultEnd = new Date(today);
-    defaultEnd.setMonth(defaultEnd.getMonth() + 12);
+    // Default to 1 year preset
+    applyTimePreset('1y');
+}
 
+/**
+ * Apply a time preset
+ */
+export function applyTimePreset(preset) {
+    const today = new Date();
+    let startDate = new Date(today);
+    let endDate = new Date(today);
+    let granularity = 'monthly';
+
+    switch (preset) {
+        case '30d':
+            endDate.setDate(endDate.getDate() + 30);
+            granularity = 'daily';
+            break;
+        case '90d':
+            endDate.setDate(endDate.getDate() + 90);
+            granularity = 'daily';
+            break;
+        case '6m':
+            endDate.setMonth(endDate.getMonth() + 6);
+            granularity = 'weekly';
+            break;
+        case '1y':
+            endDate.setFullYear(endDate.getFullYear() + 1);
+            granularity = 'monthly';
+            break;
+        case '2y':
+            endDate.setFullYear(endDate.getFullYear() + 2);
+            granularity = 'monthly';
+            break;
+        case '3y':
+            endDate.setFullYear(endDate.getFullYear() + 3);
+            granularity = 'monthly';
+            break;
+        case 'ytd':
+            // From start of current year to now
+            startDate = new Date(today.getFullYear(), 0, 1);
+            endDate = new Date(today);
+            granularity = 'weekly';
+            break;
+        case 'next-halving':
+            // Next halving is approximately April 2028 (block 1,050,000)
+            // Previous halvings: Nov 2012, July 2016, May 2020, April 2024
+            // Next one ~4 years after April 2024
+            endDate = new Date(2028, 3, 15); // April 15, 2028 (approximate)
+            granularity = 'monthly';
+            break;
+        default:
+            endDate.setFullYear(endDate.getFullYear() + 1);
+    }
+
+    // Update date inputs
     if (elements.projStartDate) {
-        elements.projStartDate.value = formatDateInput(today);
+        elements.projStartDate.value = formatDateInput(startDate);
     }
     if (elements.projEndDate) {
-        elements.projEndDate.value = formatDateInput(defaultEnd);
+        elements.projEndDate.value = formatDateInput(endDate);
     }
+    if (elements.projGranularity) {
+        elements.projGranularity.value = granularity;
+    }
+
+    // Update active button
+    const presetBtns = document.querySelectorAll('.preset-btn');
+    presetBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.preset === preset);
+    });
+}
+
+/**
+ * Initialize time preset buttons
+ */
+export function initTimePresets(onChangeCallback) {
+    const presetBtns = document.querySelectorAll('.preset-btn');
+    presetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const preset = btn.dataset.preset;
+            applyTimePreset(preset);
+            if (onChangeCallback) {
+                onChangeCallback();
+            }
+        });
+    });
 }
 
 /**
@@ -646,11 +723,12 @@ function renderQuarterlyGrid(quarters) {
     // Add total card
     if (quarters.length > 0) {
         const total = quarters[quarters.length - 1].cumulativeAtEnd;
+        const totalPeriods = quarters.reduce((sum, q) => sum + (q.periodCount || 0), 0);
         html += `
             <div class="quarter-card highlight">
                 <div class="quarter-label">Total</div>
                 <div class="quarter-value">${formatValue(total)}</div>
-                <div class="quarter-subvalue">${quarters.length * 3} months</div>
+                <div class="quarter-subvalue">${quarters.length} quarters</div>
             </div>
         `;
     }
