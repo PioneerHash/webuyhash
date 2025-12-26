@@ -229,6 +229,136 @@
 
             </section>
 
+            <!-- Forward Projections Section -->
+            <section class="card projections">
+                <div class="results-header">
+                    <h2>Forward Projections</h2>
+                    <button class="info-toggle" data-info="projections-info" aria-label="More info">?</button>
+                </div>
+                <div class="info-box" id="projections-info">
+                    <p>Model future revenue based on growth assumptions.</p>
+                    <p>Your <code class="var-input">Hashrate Growth</code> compounds monthly on your starting hashrate. <code class="var-input">Network Growth</code> represents expected Bitcoin network expansion.</p>
+                    <span class="formula-block"><code class="var-result">Future Share</code> = <code class="var-input">Your Hashrate</code> × (1 + growth)ⁿ ÷ <code class="var-network">Network</code> × (1 + net growth)ⁿ</span>
+                </div>
+
+                <!-- Growth Assumptions -->
+                <div class="assumptions-grid">
+                    <div class="assumption-input">
+                        <label for="projStartDate">Start Date</label>
+                        <div class="input-row">
+                            <input type="date" id="projStartDate">
+                        </div>
+                    </div>
+                    <div class="assumption-input">
+                        <label for="projEndDate">End Date</label>
+                        <div class="input-row">
+                            <input type="date" id="projEndDate">
+                        </div>
+                    </div>
+                    <div class="assumption-input">
+                        <label for="projGranularity">Time Granularity</label>
+                        <div class="input-row">
+                            <select id="projGranularity">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly" selected>Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="assumption-input">
+                        <label for="poolGrowth">Your Hashrate Growth</label>
+                        <div class="input-row">
+                            <input type="number" id="poolGrowth" value="5" min="-50" max="100" step="0.5">
+                            <span class="unit">% / month</span>
+                        </div>
+                    </div>
+                    <div class="assumption-input">
+                        <label for="networkGrowth">Network Hashrate Growth</label>
+                        <div class="input-row">
+                            <input type="number" id="networkGrowth" value="3" min="-20" max="50" step="0.5">
+                            <span class="unit">% / month</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projection Formulae -->
+                <div class="projection-formulae">
+                    <h3 class="subsection-title">Projection Formulae</h3>
+                    <div class="formulae-grid">
+                        <div class="formula-card">
+                            <div class="formula-card-label">Future Pool Hashrate</div>
+                            <div class="formula-card-equation">
+                                <code class="var-result">H(t)</code> = <code class="var-input">H₀</code> × (1 + <code class="var-input">g</code>)<sup>t</sup>
+                            </div>
+                            <div class="formula-card-values" id="formulaPoolHashrate">
+                                H₀ = -- | g = --% | t = -- periods
+                            </div>
+                        </div>
+                        <div class="formula-card">
+                            <div class="formula-card-label">Future Network Hashrate</div>
+                            <div class="formula-card-equation">
+                                <code class="var-result">N(t)</code> = <code class="var-network">N₀</code> × (1 + <code class="var-input">gₙ</code>)<sup>t</sup>
+                            </div>
+                            <div class="formula-card-values" id="formulaNetworkHashrate">
+                                N₀ = -- | gₙ = --% | t = -- periods
+                            </div>
+                        </div>
+                        <div class="formula-card">
+                            <div class="formula-card-label">Future Network Share</div>
+                            <div class="formula-card-equation">
+                                <code class="var-result">S(t)</code> = <code class="var-result">H(t)</code> ÷ <code class="var-result">N(t)</code> × 100
+                            </div>
+                            <div class="formula-card-values" id="formulaShare">
+                                Share changes from --% to --%
+                            </div>
+                        </div>
+                        <div class="formula-card">
+                            <div class="formula-card-label">Period Revenue</div>
+                            <div class="formula-card-equation">
+                                <code class="var-result">R(t)</code> = <code class="var-result">S(t)</code> × <code class="var-network">Blocks</code> × <code class="var-input">Reward</code> × <code class="var-input">Fee%</code>
+                            </div>
+                            <div class="formula-card-values" id="formulaRevenue">
+                                144 blocks/day × -- BTC × --% fee
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projections Table -->
+                <div class="projections-table-container">
+                    <table class="projections-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Period</th>
+                                <th>Your Hashrate</th>
+                                <th>Network</th>
+                                <th>Share %</th>
+                                <th>Period Revenue</th>
+                                <th>Cumulative</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectionsBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="projections-total">
+                                <td colspan="4">Total Projected Revenue</td>
+                                <td id="projectionsTotalMonthly">--</td>
+                                <td id="projectionsTotalCumulative">--</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Quarterly Summary -->
+                <h3 class="subsection-title">Quarterly Summary</h3>
+                <div class="quarterly-grid" id="quarterlyGrid">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+            </section>
+
         </main>
 
         <footer>

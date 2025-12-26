@@ -240,3 +240,159 @@ export function formatPercent(percent) {
         return `${percent.toFixed(2)}%`;
     }
 }
+
+// ===========================================
+// Forward Projections
+// ===========================================
+
+/**
+ * Calculate forward projections with growth assumptions
+ *
+ * @param {Object} params - Current parameters
+ * @param {number} params.poolHashrate - Current pool hashrate in H/s
+ * @param {number} params.networkHashrate - Current network hashrate in H/s
+ * @param {number} params.blockReward - Current block reward in BTC
+ * @param {number} params.poolFee - Pool fee percentage
+ * @param {number} params.poolGrowthRate - Monthly pool hashrate growth (e.g., 5 for 5%)
+ * @param {number} params.networkGrowthRate - Monthly network hashrate growth (e.g., 3 for 3%)
+ * @param {Date} params.startDate - Start date for projections
+ * @param {Date} params.endDate - End date for projections
+ * @param {string} params.granularity - 'daily', 'weekly', or 'monthly'
+ * @returns {Array} Array of projection objects
+ */
+export function calculateForwardProjections(params) {
+    const {
+        poolHashrate,
+        networkHashrate,
+        blockReward,
+        poolFee,
+        poolGrowthRate,
+        networkGrowthRate,
+        startDate,
+        endDate,
+        granularity = 'monthly'
+    } = params;
+
+    const projections = [];
+    let cumulativeRevenue = 0;
+
+    // Calculate period parameters based on granularity
+    const periodConfig = {
+        daily: { days: 1, monthFraction: 1/30, label: 'Day' },
+        weekly: { days: 7, monthFraction: 7/30, label: 'Week' },
+        monthly: { days: 30, monthFraction: 1, label: 'Month' }
+    };
+
+    const config = periodConfig[granularity];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Calculate total periods
+    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    const totalPeriods = Math.ceil(totalDays / config.days);
+
+    // Cap at reasonable number of periods for performance
+    const maxPeriods = granularity === 'daily' ? 365 : (granularity === 'weekly' ? 104 : 36);
+    const periods = Math.min(totalPeriods, maxPeriods);
+
+    for (let period = 1; period <= periods; period++) {
+        // Calculate the date for this period
+        const periodDate = new Date(start);
+        periodDate.setDate(periodDate.getDate() + (period - 1) * config.days);
+
+        // Stop if we've passed the end date
+        if (periodDate > end) break;
+
+        // Calculate months elapsed for growth calculation
+        const monthsElapsed = period * config.monthFraction;
+
+        // Apply compound growth (based on monthly rate)
+        const poolGrowthMultiplier = Math.pow(1 + poolGrowthRate / 100, monthsElapsed);
+        const networkGrowthMultiplier = Math.pow(1 + networkGrowthRate / 100, monthsElapsed);
+
+        const projectedPoolHashrate = poolHashrate * poolGrowthMultiplier;
+        const projectedNetworkHashrate = networkHashrate * networkGrowthMultiplier;
+
+        // Calculate share and revenue
+        const sharePercent = (projectedPoolHashrate / projectedNetworkHashrate) * 100;
+        const dailyBTC = (projectedPoolHashrate / projectedNetworkHashrate) * BLOCKS_PER_DAY * blockReward;
+        const periodBTC = dailyBTC * config.days;
+        const periodRevenue = periodBTC * (poolFee / 100);
+
+        cumulativeRevenue += periodRevenue;
+
+        projections.push({
+            period,
+            date: periodDate,
+            dateStr: formatDateShort(periodDate),
+            label: `${config.label} ${period}`,
+            poolHashrate: projectedPoolHashrate,
+            networkHashrate: projectedNetworkHashrate,
+            sharePercent,
+            dailyBTC,
+            periodBTC,
+            periodRevenue,
+            cumulativeRevenue,
+            monthsElapsed
+        });
+    }
+
+    return projections;
+}
+
+/**
+ * Format date as short string
+ */
+function formatDateShort(date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
+/**
+ * Calculate quarterly summaries from monthly projections
+ *
+ * @param {Array} projections - Array of monthly projections
+ * @returns {Array} Array of quarterly summary objects
+ */
+export function calculateQuarterlySummaries(projections) {
+    const quarters = [];
+    const numQuarters = Math.ceil(projections.length / 3);
+
+    for (let q = 0; q < numQuarters; q++) {
+        const startMonth = q * 3;
+        const endMonth = Math.min(startMonth + 3, projections.length);
+        const quarterMonths = projections.slice(startMonth, endMonth);
+
+        if (quarterMonths.length === 0) continue;
+
+        const quarterRevenue = quarterMonths.reduce((sum, m) => sum + m.monthlyRevenue, 0);
+        const lastMonth = quarterMonths[quarterMonths.length - 1];
+
+        quarters.push({
+            quarter: q + 1,
+            label: `Q${q + 1}`,
+            revenue: quarterRevenue,
+            endSharePercent: lastMonth.sharePercent,
+            endPoolHashrate: lastMonth.poolHashrate,
+            cumulativeAtEnd: lastMonth.cumulativeRevenue
+        });
+    }
+
+    return quarters;
+}
+
+/**
+ * Format hashrate for compact display
+ */
+export function formatHashrateCompact(hashrate) {
+    const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s', 'PH/s', 'EH/s', 'ZH/s'];
+    let unitIndex = 0;
+    let value = hashrate;
+
+    while (value >= 1000 && unitIndex < units.length - 1) {
+        value /= 1000;
+        unitIndex++;
+    }
+
+    return `${value.toFixed(1)} ${units[unitIndex]}`;
+}

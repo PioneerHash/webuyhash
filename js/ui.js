@@ -3,7 +3,7 @@
 import { formatHashrate, formatDifficulty, formatNumber } from './api.js';
 import {
     formatBTC, formatSats, formatPercent,
-    btcToSats, projectEarnings
+    btcToSats, projectEarnings, formatHashrateCompact
 } from './calculator.js';
 
 // Current display unit (btc or sats)
@@ -42,6 +42,23 @@ const elements = {
     // Results
     networkShare: document.getElementById('networkShare'),
     expectedBlocks: document.getElementById('expectedBlocks'),
+
+    // Projections
+    projStartDate: document.getElementById('projStartDate'),
+    projEndDate: document.getElementById('projEndDate'),
+    projGranularity: document.getElementById('projGranularity'),
+    poolGrowth: document.getElementById('poolGrowth'),
+    networkGrowth: document.getElementById('networkGrowth'),
+    projectionsBody: document.getElementById('projectionsBody'),
+    projectionsTotalMonthly: document.getElementById('projectionsTotalMonthly'),
+    projectionsTotalCumulative: document.getElementById('projectionsTotalCumulative'),
+    quarterlyGrid: document.getElementById('quarterlyGrid'),
+
+    // Projection formulae displays
+    formulaPoolHashrate: document.getElementById('formulaPoolHashrate'),
+    formulaNetworkHashrate: document.getElementById('formulaNetworkHashrate'),
+    formulaShare: document.getElementById('formulaShare'),
+    formulaRevenue: document.getElementById('formulaRevenue'),
 
     // Main results table
     amountHeader: document.getElementById('amountHeader'),
@@ -222,6 +239,175 @@ export function setDefaultTxFees(avgFees) {
     if (elements.txFees) {
         elements.txFees.value = avgFees.toFixed(4);
     }
+}
+
+/**
+ * Get projection input values
+ */
+export function getProjectionInputs() {
+    // Default to today and 12 months from now
+    const today = new Date();
+    const defaultEnd = new Date(today);
+    defaultEnd.setMonth(defaultEnd.getMonth() + 12);
+
+    const startDateStr = elements.projStartDate?.value;
+    const endDateStr = elements.projEndDate?.value;
+
+    return {
+        startDate: startDateStr ? new Date(startDateStr) : today,
+        endDate: endDateStr ? new Date(endDateStr) : defaultEnd,
+        granularity: elements.projGranularity?.value || 'monthly',
+        poolGrowth: parseFloat(elements.poolGrowth?.value) || 0,
+        networkGrowth: parseFloat(elements.networkGrowth?.value) || 0
+    };
+}
+
+/**
+ * Initialize projection date inputs with defaults
+ */
+export function initProjectionDates() {
+    const today = new Date();
+    const defaultEnd = new Date(today);
+    defaultEnd.setMonth(defaultEnd.getMonth() + 12);
+
+    if (elements.projStartDate) {
+        elements.projStartDate.value = formatDateInput(today);
+    }
+    if (elements.projEndDate) {
+        elements.projEndDate.value = formatDateInput(defaultEnd);
+    }
+}
+
+/**
+ * Format date for input[type="date"]
+ */
+function formatDateInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Render projections table
+ */
+export function renderProjections(projections, quarters, params) {
+    if (!elements.projectionsBody) return;
+
+    // Build table rows
+    let html = '';
+    projections.forEach((proj, index) => {
+        // Highlight every 3rd row for monthly, every 4th for weekly
+        const highlightInterval = params?.granularity === 'weekly' ? 4 : 3;
+        const isHighlight = (index + 1) % highlightInterval === 0;
+        const rowClass = isHighlight ? 'quarter-row' : '';
+
+        html += `
+            <tr class="${rowClass}">
+                <td>${proj.dateStr}</td>
+                <td>${proj.label}</td>
+                <td>${formatHashrateCompact(proj.poolHashrate)}</td>
+                <td>${formatHashrateCompact(proj.networkHashrate)}</td>
+                <td>${formatPercent(proj.sharePercent)}</td>
+                <td>${formatValue(proj.periodRevenue)}</td>
+                <td>${formatValue(proj.cumulativeRevenue)}</td>
+            </tr>
+        `;
+    });
+
+    elements.projectionsBody.innerHTML = html;
+
+    // Update totals
+    if (projections.length > 0) {
+        const lastProj = projections[projections.length - 1];
+        const avgPeriod = lastProj.cumulativeRevenue / projections.length;
+        const periodLabel = params?.granularity === 'daily' ? 'day' :
+                           params?.granularity === 'weekly' ? 'wk' : 'mo';
+
+        if (elements.projectionsTotalMonthly) {
+            elements.projectionsTotalMonthly.textContent = `~${formatValue(avgPeriod)}/${periodLabel}`;
+        }
+        if (elements.projectionsTotalCumulative) {
+            elements.projectionsTotalCumulative.textContent = formatValue(lastProj.cumulativeRevenue);
+        }
+    }
+
+    // Render quarterly grid
+    renderQuarterlyGrid(quarters);
+
+    // Update formulae displays
+    if (projections.length > 0 && params) {
+        updateProjectionFormulae(projections, params);
+    }
+}
+
+/**
+ * Update projection formulae displays with actual values
+ */
+function updateProjectionFormulae(projections, params) {
+    const firstProj = projections[0];
+    const lastProj = projections[projections.length - 1];
+
+    // Pool hashrate formula
+    if (elements.formulaPoolHashrate) {
+        elements.formulaPoolHashrate.textContent =
+            `H₀ = ${formatHashrateCompact(params.poolHashrate)} | g = ${params.poolGrowthRate}%/mo | t = ${projections.length} periods`;
+    }
+
+    // Network hashrate formula
+    if (elements.formulaNetworkHashrate) {
+        elements.formulaNetworkHashrate.textContent =
+            `N₀ = ${formatHashrateCompact(params.networkHashrate)} | gₙ = ${params.networkGrowthRate}%/mo | t = ${projections.length} periods`;
+    }
+
+    // Share formula
+    if (elements.formulaShare) {
+        elements.formulaShare.textContent =
+            `Share changes from ${formatPercent(firstProj.sharePercent)} to ${formatPercent(lastProj.sharePercent)}`;
+    }
+
+    // Revenue formula
+    if (elements.formulaRevenue) {
+        const blocksLabel = params.granularity === 'daily' ? '144 blocks/day' :
+                           params.granularity === 'weekly' ? '1,008 blocks/wk' : '4,320 blocks/mo';
+        elements.formulaRevenue.textContent =
+            `${blocksLabel} × ${params.blockReward.toFixed(4)} BTC × ${params.poolFee}% fee`;
+    }
+}
+
+/**
+ * Render quarterly summary grid
+ */
+function renderQuarterlyGrid(quarters) {
+    if (!elements.quarterlyGrid) return;
+
+    let html = '';
+    quarters.forEach((q, index) => {
+        const isLast = index === quarters.length - 1;
+        const highlight = isLast ? 'highlight' : '';
+
+        html += `
+            <div class="quarter-card ${highlight}">
+                <div class="quarter-label">${q.label}</div>
+                <div class="quarter-value">${formatValue(q.revenue)}</div>
+                <div class="quarter-subvalue">Share: ${formatPercent(q.endSharePercent)}</div>
+            </div>
+        `;
+    });
+
+    // Add total card
+    if (quarters.length > 0) {
+        const total = quarters[quarters.length - 1].cumulativeAtEnd;
+        html += `
+            <div class="quarter-card highlight">
+                <div class="quarter-label">Total</div>
+                <div class="quarter-value">${formatValue(total)}</div>
+                <div class="quarter-subvalue">${quarters.length * 3} months</div>
+            </div>
+        `;
+    }
+
+    elements.quarterlyGrid.innerHTML = html;
 }
 
 /**

@@ -5,7 +5,9 @@ import {
     convertToHashPerSecond,
     calculateDailyBTC,
     calculateNetworkShare,
-    calculateExpectedBlocksPerDay
+    calculateExpectedBlocksPerDay,
+    calculateForwardProjections,
+    calculateQuarterlySummaries
 } from './calculator.js';
 import {
     updateNetworkStats,
@@ -15,9 +17,12 @@ import {
     updateRewardDisplay,
     setDefaultTxFees,
     getInputValues,
+    getProjectionInputs,
+    renderProjections,
     initInfoBoxes,
     initSliderSync,
     initUnitToggle,
+    initProjectionDates,
     setLoading,
     showError,
     clearError,
@@ -89,6 +94,35 @@ function calculate() {
         avgBlockFees: txFees,
         blockReward: blockReward
     });
+
+    // Calculate forward projections
+    calculateProjections(hashrateInHps, blockReward, feePercent);
+}
+
+/**
+ * Calculate and render forward projections
+ */
+function calculateProjections(poolHashrate, blockReward, poolFee) {
+    if (!networkData) return;
+
+    const projInputs = getProjectionInputs();
+
+    const params = {
+        poolHashrate: poolHashrate,
+        networkHashrate: networkData.networkHashrate,
+        blockReward: blockReward,
+        poolFee: poolFee,
+        poolGrowthRate: projInputs.poolGrowth,
+        networkGrowthRate: projInputs.networkGrowth,
+        startDate: projInputs.startDate,
+        endDate: projInputs.endDate,
+        granularity: projInputs.granularity
+    };
+
+    const projections = calculateForwardProjections(params);
+    const quarters = calculateQuarterlySummaries(projections);
+
+    renderProjections(projections, quarters, params);
 }
 
 // Track if we've set initial tx fees
@@ -160,6 +194,29 @@ function initEventListeners() {
     if (txFees) {
         txFees.addEventListener('input', debouncedCalculate);
     }
+
+    // Projection inputs
+    const poolGrowth = document.getElementById('poolGrowth');
+    const networkGrowth = document.getElementById('networkGrowth');
+    const projStartDate = document.getElementById('projStartDate');
+    const projEndDate = document.getElementById('projEndDate');
+    const projGranularity = document.getElementById('projGranularity');
+
+    if (poolGrowth) {
+        poolGrowth.addEventListener('input', debouncedCalculate);
+    }
+    if (networkGrowth) {
+        networkGrowth.addEventListener('input', debouncedCalculate);
+    }
+    if (projStartDate) {
+        projStartDate.addEventListener('change', calculate);
+    }
+    if (projEndDate) {
+        projEndDate.addEventListener('change', calculate);
+    }
+    if (projGranularity) {
+        projGranularity.addEventListener('change', calculate);
+    }
 }
 
 /**
@@ -195,6 +252,7 @@ async function init() {
     initInfoBoxes();
     initSliderSync();
     initUnitToggle();
+    initProjectionDates();
 
     // Set up event listeners
     initEventListeners();
